@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architect Lite 1.2 | Visual Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #0f111a;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --glass: rgba(30, 41, 59, 0.5);
+            --border: #1e293b;
+            --code-bg: #050505;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.5;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        .bg-glow {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% -20%, #1e293b 0%, #0f111a 60%);
+            z-index: -1;
+        }
+
+        .hero {
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 0 24px;
+        }
+
+        .badge {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--accent-hover);
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: clamp(3rem, 10vw, 5.5rem);
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -2px;
+            line-height: 0.95;
+            color: #fff;
+        }
+
+        .hero p {
+            max-width: 600px;
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--text-muted);
+            margin: 25px 0;
+        }
+
+        .section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px 24px 60px 24px;
+        }
+
+        .terminal-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.7);
+        }
+
+        .terminal-header {
+            background: #0f111a;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .terminal-controls { display: flex; gap: 8px; }
+        .control { width: 12px; height: 12px; border-radius: 50%; opacity: 0.5; }
+        .red { background: #ff5f56; }
+        .yellow { background: #ffbd2e; }
+        .green { background: #27c93f; }
+
+        .copy-btn {
+            background: var(--accent);
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .copy-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+
+        pre {
+            margin: 0;
+            padding: 30px;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            color: #94a3b8;
+            text-align: left;
+            line-height: 1.6;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        pre::-webkit-scrollbar { width: 8px; }
+        pre::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+
+        .cta-button {
+            background: #fff;
+            color: #000;
+            padding: 16px 36px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .cta-button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255,255,255,0.1); }
+
+        .comment { color: #475569; font-style: italic; }
+        .keyword { color: #818cf8; }
+        .string { color: #4ade80; }
+        .const { color: #f472b6; }
+        .func { color: #fbbf24; }
+
+        footer {
+            padding: 40px 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            border-top: 1px solid var(--border);
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-glow"></div>
+
+    <section class="hero">
+        <div class="badge">
+            <i data-lucide="scan-eye" style="width: 14px;"></i>
+            Architect Lite 1.2
+        </div>
+        <h1>Scan Anything.<br>Solve Everything.</h1>
+        <p>A high-performance visual AI assistant. OCR scanning, model swapping, and math-ready intelligence contained in a persistent browser lens.</p>
+        <a href="#source" class="cta-button">
+            <i data-lucide="terminal"></i>
+            View Script
+        </a>
+    </section>
+
+    <section class="section" id="source">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="font-size: 32px; letter-spacing: -1px;">Source Code</h2>
+            <p style="color: var(--text-muted);">v1.2.3 Build • Full Implementation</p>
+        </div>
+
+        <div class="terminal-container">
+            <div class="terminal-header">
+                <div class="terminal-controls">
+                    <div class="control red"></div>
+                    <div class="control yellow"></div>
+                    <div class="control green"></div>
+                </div>
+                <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">
+                    <i data-lucide="copy" id="btnIcon" style="width: 16px;"></i>
+                    <span id="btnText">Copy Code</span>
+                </button>
+            </div>
+<pre id="codeBlock">
+<span class="comment">// ==UserScript==
+// @name          Architect Lite 1.2 - Full Fix
+// @version       1.2.3
+// @description   Persistent Lens with Lucide Icons, Chat History, and Model Swapping.
+// @match         *://*/*
+// @run-at        document-end
+// ==/UserScript==</span>
+
+(<span class="keyword">async</span> () => {
+    <span class="keyword">const</span> <span class="const">API</span> = <span class="string">"https://openrouter.ai/api/v1/chat/completions"</span>;
+    <span class="keyword">let</span> KEY = localStorage.<span class="func">getItem</span>(<span class="string">"ai_helper_api_key"</span>) || <span class="string">""</span>;
+    <span class="keyword">let</span> SELECTED_MODEL = <span class="string">"openai/gpt-4o-mini"</span>;
+    <span class="keyword">let</span> chatHistory = [];
+    <span class="keyword">let</span> busy = <span class="keyword">false</span>;
+    <span class="keyword">let</span> isHidden = <span class="keyword">false</span>;
+    <span class="keyword">let</span> activeStream = <span class="keyword">null</span>;
+
+    <span class="keyword">const</span> <span class="func">loadLucide</span> = () => {
+        <span class="keyword">const</span> script = document.<span class="func">createElement</span>(<span class="string">'script'</span>);
+        script.src = <span class="string">"https://unpkg.com/lucide@latest"</span>;
+        script.onload = () => lucide.<span class="func">createIcons</span>();
+        document.head.<span class="func">appendChild</span>(script);
+    };
+
+    <span class="keyword">const</span> <span class="func">getStream</span> = <span class="keyword">async</span> () => {
+        <span class="keyword">if</span> (activeStream && activeStream.active) <span class="keyword">return</span> activeStream;
+        <span class="keyword">try</span> {
+            activeStream = <span class="keyword">await</span> navigator.mediaDevices.<span class="func">getDisplayMedia</span>({ 
+                video: { displaySurface: <span class="string">"browser"</span> },
+                selfBrowserSurface: <span class="string">"include"</span> 
+            });
+            <span class="keyword">return</span> activeStream;
+        } <span class="keyword">catch</span> (e) { <span class="keyword">return null</span>; }
+    };
+
+    <span class="keyword">const</span> <span class="func">startCapture</span> = <span class="keyword">async</span> () => {
+        <span class="keyword">if</span> (busy) <span class="keyword">return</span>;
+        <span class="keyword">const</span> stream = <span class="keyword">await</span> <span class="func">getStream</span>();
+        <span class="keyword">if</span> (!stream) <span class="keyword">return</span>;
+        <span class="keyword">const</span> video = document.<span class="func">createElement</span>(<span class="string">'video'</span>);
+        video.srcObject = stream;
+        <span class="keyword">await</span> video.<span class="func">play</span>();
+        
+        <span class="func">setTimeout</span>(() => {
+            <span class="keyword">const</span> canvas = document.<span class="func">createElement</span>(<span class="string">'canvas'</span>);
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext(<span class="string">'2d'</span>).<span class="func">drawImage</span>(video, <span class="const">0</span>, <span class="const">0</span>);
+            <span class="func">createSelector</span>(canvas);
+            video.<span class="func">pause</span>();
+        }, <span class="const">150</span>);
+    };
+
+    <span class="keyword">const</span> <span class="func">askAI</span> = <span class="keyword">async</span> (textInput = <span class="keyword">null</span>, base64 = <span class="keyword">null</span>) => {
+        <span class="keyword">if</span> (!KEY) KEY = <span class="func">prompt</span>(<span class="string">"Enter API Key:"</span>);
+        busy = <span class="keyword">true</span>;
+        <span class="comment">// API call logic...</span>
+        <span class="keyword">const</span> response = <span class="keyword">await</span> <span class="func">fetch</span>(<span class="const">API</span>, {
+            method: <span class="string">"POST"</span>,
+            headers: { <span class="string">"Authorization"</span>: <span class="string">`Bearer ${KEY}`</span>, <span class="string">"Content-Type"</span>: <span class="string">"application/json"</span> },
+            body: JSON.<span class="func">stringify</span>({ model: SELECTED_MODEL, messages: chatHistory })
+        });
+        busy = <span class="keyword">false</span>;
+    };
+
+    <span class="func">makeUI</span>();
+})();</pre>
+        </div>
+    </section>
+
+    <footer>
+        DESIGNED FOR WEB INTELLIGENCE • 2026
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        function copyToClipboard() {
+            const rawCode = `// ==UserScript==
+// @name          Architect Lite 1.2 - Full Fix
+// @namespace     http://tampermonkey.net/
+// @version       1.2.3
+// @description   Persistent Lens with Lucide Icons, Chat History, Model Swapping, and UI fix for long text.
+// @author        Your Name
+// @match         *://*/*
+// @run-at        document-end
+// ==/UserScript==
+
+(async () => {
+    const API = "https://openrouter.ai/api/v1/chat/completions";
+    let KEY = localStorage.getItem("ai_helper_api_key") || "";
+    let SELECTED_MODEL = "openai/gpt-4o-mini";
+    let chatHistory = [];
+    let busy = false;
+    let isHidden = false;
+    let activeStream = null;
+
+    const loadLucide = () => {
+        const script = document.createElement('script');
+        script.src = "https://unpkg.com/lucide@latest";
+        script.onload = () => lucide.createIcons();
+        document.head.appendChild(script);
+    };
+
+    const toggleUI = () => {
+        const panel = document.getElementById("ai-panel");
+        if (!panel) return;
+        isHidden = !isHidden;
+        panel.style.display = isHidden ? "none" : "flex";
+    };
+
+    window.addEventListener("keydown", (e) => {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+        if (e.key === "/") { e.preventDefault(); toggleUI(); }
+    });
+
+    const getStream = async () => {
+        if (activeStream && activeStream.active) return activeStream;
+        try {
+            activeStream = await navigator.mediaDevices.getDisplayMedia({ 
+                video: { displaySurface: "browser" },
+                selfBrowserSurface: "include" 
+            });
+            activeStream.getVideoTracks()[0].onended = () => {
+                activeStream = null;
+                const dot = document.getElementById("ai-status-dot");
+                if (dot) dot.style.background = "#475569";
+            };
+            return activeStream;
+        } catch (e) { return null; }
+    };
+
+    const startCapture = async () => {
+        if (busy) return;
+        const stream = await getStream();
+        if (!stream) return;
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        await video.play();
+        setTimeout(() => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            createSelector(canvas);
+            video.pause();
+            video.srcObject = null;
+        }, 150);
+    };
+
+    const createSelector = (fullCanvas) => {
+        const overlay = document.createElement('div');
+        overlay.style = "position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:2147483647;cursor:crosshair;";
+        const selector = document.createElement('div');
+        selector.style = "position:absolute;border:2px solid #818cf8;background:rgba(99, 102, 241, 0.1);";
+        overlay.appendChild(selector);
+        document.body.appendChild(overlay);
+        let startX, startY;
+        overlay.onmousedown = (e) => { startX = e.clientX; startY = e.clientY; };
+        overlay.onmousemove = (e) => {
+            if (startX === undefined) return;
+            selector.style.width = Math.abs(e.clientX - startX) + 'px';
+            selector.style.height = Math.abs(e.clientY - startY) + 'px';
+            selector.style.left = Math.min(e.clientX, startX) + 'px';
+            selector.style.top = Math.min(e.clientY, startY) + 'px';
+        };
+        overlay.onmouseup = () => {
+            const rect = selector.getBoundingClientRect();
+            document.body.removeChild(overlay);
+            const scaleX = fullCanvas.width / window.innerWidth;
+            const scaleY = fullCanvas.height / window.innerHeight;
+            const crop = document.createElement('canvas');
+            crop.width = rect.width * scaleX; 
+            crop.height = rect.height * scaleY;
+            crop.getContext('2d').drawImage(fullCanvas, rect.left * scaleX, rect.top * scaleY, rect.width * scaleX, rect.height * scaleY, 0, 0, crop.width, crop.height);
+            askAI(null, crop.toDataURL('image/jpeg', 0.9).split(',')[1]);
+        };
+    };
+
+    const askAI = async (textInput = null, base64 = null) => {
+        const output = document.getElementById("ai-answer");
+        const status = document.getElementById("ai-status-dot");
+        if (!KEY) {
+            KEY = prompt("Enter OpenRouter API key:");
+            localStorage.setItem("ai_helper_api_key", (KEY || "").trim());
+        }
+        busy = true;
+        status.style.background = "#fbbf24";
+        if (base64) {
+            output.innerHTML = '<span style="color:#94a3b8;">Processing Scan...</span>';
+            chatHistory = [{ role: "system", content: "Expert tutor. OCR and solve. Use MathJax: \\\\\\\\( ... \\\\\\\\) for inline, \\\\\\\\\\\\[ ... \\\\\\\\\\\\] for blocks." }];
+            chatHistory.push({ role: "user", content: [
+                { type: "text", text: "Analyze this image:" },
+                { type: "image_url", image_url: { url: \`data:image/jpeg;base64,\${base64}\` } }
+            ]});
+        } else if (textInput) {
+            chatHistory.push({ role: "user", content: textInput });
+        }
+        try {
+            const response = await fetch(API, {
+                method: "POST",
+                headers: { "Authorization": \`Bearer \${KEY}\`, "Content-Type": "application/json" },
+                body: JSON.stringify({ model: SELECTED_MODEL, messages: chatHistory })
+            });
+            const data = await response.json();
+            const reply = data.choices?.[0]?.message?.content || "No response received.";
+            chatHistory.push({ role: "assistant", content: reply });
+            output.innerHTML = chatHistory.filter(m => m.role !== 'system').map(m => \`
+                <div style="margin-bottom:12px; border-left: 2px solid \${m.role === 'user' ? '#818cf8' : '#334155'}; padding-left: 8px;">
+                    <div style="font-size: 10px; color: #64748b; margin-bottom: 2px; font-weight:bold;">\${m.role.toUpperCase()}</div>
+                    <div style="word-wrap: break-word;">\${(typeof m.content === 'string' ? m.content : "[Image Data]").replace(/\\\\n/g, '<br>')}</div>
+                </div>
+            \`).join('');
+            if (window.MathJax) window.MathJax.typesetPromise([output]);
+            status.style.background = "#6366f1";
+            output.scrollTop = output.scrollHeight;
+        } catch (e) { output.innerHTML += "<br><span style='color:#f87171;'>API Error.</span>"; }
+        busy = false;
+    };
+
+    const makeUI = () => {
+        const style = document.createElement("style");
+        style.textContent = \`
+            #ai-panel { 
+                position: fixed; bottom: 20px; right: 20px; width: 340px; height: 400px;
+                background: #0f111a; color: #fff; border-radius: 16px; padding: 14px; 
+                font-family: ui-sans-serif, system-ui, sans-serif; z-index: 2147483646; 
+                box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 1px solid #1e293b; 
+                display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+            }
+            #ai-header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; font-weight: 800; letter-spacing: 0.5px; }
+            #ai-status-dot { width: 8px; height: 8px; background: #6366f1; border-radius: 50%; box-shadow: 0 0 8px #6366f1; transition: background 0.3s; }
+            #ai-answer { flex: 1; min-height: 0; overflow-y: auto; font-size: 13px; line-height: 1.5; color: #e2e8f0; padding-right: 8px; scroll-behavior: smooth;}
+            #ai-answer::-webkit-scrollbar { width: 4px; }
+            #ai-answer::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+            .tool-row { flex-shrink: 0; display: flex; gap: 6px; }
+            .tool-btn { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; padding: 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+            .primary-btn { background: #6366f1; border: none; flex: 1; font-weight: 600; color: white; }
+            #ai-input { background: #1e293b; border: 1px solid #334155; color: #fff; padding: 10px; border-radius: 8px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
+            select { background: transparent; color: #64748b; border: none; font-size: 10px; outline: none; cursor: pointer; font-weight: bold; }
+        \`;
+        document.head.appendChild(style);
+        const panel = document.createElement("div");
+        panel.id = "ai-panel";
+        panel.innerHTML = \`
+            <div id="ai-header">
+                <div style="display:flex;align-items:center;gap:6px;"><div id="ai-status-dot"></div> ARCHITECT LITE 1.2</div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <select id="model-select">
+                        <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                        <option value="anthropic/claude-3.5-sonnet">Claude 3.5</option>
+                        <option value="google/gemini-flash-1.5">Gemini 1.5</option>
+                    </select>
+                    <div id="ai-close" style="cursor:pointer;"><i data-lucide="x" style="width:14px;"></i></div>
+                </div>
+            </div>
+            <div id="ai-answer">Session started. Press <b>/</b> to toggle.</div>
+            <div class="tool-row">
+                <button id="lens-scan" class="tool-btn primary-btn"><i data-lucide="camera" style="width:14px; margin-right:6px;"></i> SCAN</button>
+                <button id="copy-btn" class="tool-btn"><i data-lucide="copy" style="width:14px;"></i></button>
+                <button id="clear-chat" class="tool-btn"><i data-lucide="trash-2" style="width:14px;"></i></button>
+            </div>
+            <input type="text" id="ai-input" placeholder="Type a message..." />
+        \`;
+        document.body.appendChild(panel);
+        document.getElementById("lens-scan").onclick = startCapture;
+        document.getElementById("ai-close").onclick = toggleUI;
+        document.getElementById("model-select").onchange = (e) => SELECTED_MODEL = e.target.value;
+        document.getElementById("clear-chat").onclick = () => { chatHistory = []; document.getElementById("ai-answer").innerHTML = "Memory cleared."; };
+        document.getElementById("copy-btn").onclick = () => {
+            const lastMsg = chatHistory.filter(m => m.role === 'assistant').pop()?.content || "";
+            if (lastMsg) navigator.clipboard.writeText(lastMsg);
+        };
+        document.getElementById("ai-input").onkeydown = (e) => {
+            if (e.key === "Enter" && e.target.value.trim()) {
+                askAI(e.target.value.trim());
+                e.target.value = "";
+            }
+        };
+        const mathjax = document.createElement('script');
+        mathjax.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+        document.head.appendChild(mathjax);
+        loadLucide();
+    };
+    makeUI();
+})();`;
+
+            navigator.clipboard.writeText(rawCode).then(() => {
+                const btnText = document.getElementById('btnText');
+                const btnIcon = document.getElementById('btnIcon');
+                const btn = document.getElementById('copyBtn');
+
+                btnText.innerText = 'Copied to Clipboard';
+                btn.style.background = '#27c93f';
+                btnIcon.setAttribute('data-lucide', 'check-circle');
+                lucide.createIcons();
+
+                setTimeout(() => {
+                    btnText.innerText = 'Copy Code';
+                    btn.style.background = 'var(--accent)';
+                    btnIcon.setAttribute('data-lucide', 'copy');
+                    lucide.createIcons();
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
