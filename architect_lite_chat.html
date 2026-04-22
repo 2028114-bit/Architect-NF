@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Architect Lite | Pro</title>
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/2028114-bit/Picture/refs/heads/main/favicon-32x32.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -27,6 +26,8 @@
             justify-content: center;
             margin-bottom: 2rem;
             flex-shrink: 0;
+            /* Prevents the orb from blocking text selection/clicks */
+            pointer-events: none; 
         }
 
         .ring {
@@ -70,8 +71,8 @@
     <div class="w-full flex justify-between text-[10px] tracking-[0.2em] text-gray-500 uppercase font-semibold mb-4">
         <span>Architect Lite 1.4 | Powered by Tommy</span>
         <div class="flex gap-4">
-            <button onclick="newChat()" class="hover:text-white transition">New Chat</button>
-            <button onclick="resetAll()" class="hover:text-red-400 transition text-gray-700">Hard Reset</button>
+            <button onclick="newChat()" class="hover:text-white transition" style="pointer-events: auto;">New Chat</button>
+            <button onclick="resetAll()" class="hover:text-red-400 transition text-gray-700" style="pointer-events: auto;">Hard Reset</button>
         </div>
     </div>
 
@@ -200,14 +201,26 @@
         }
 
         function typeText(text, element) {
-            let i = 0; element.innerHTML = ""; 
+            let i = 0; 
+            element.innerHTML = ""; 
+            const box = document.getElementById('scroll-box');
+
             const interval = setInterval(() => {
                 if (i <= text.length) {
+                    // Check if the user is at the bottom before adding text
+                    // We use a 50px buffer to make it feel smoother
+                    const isAtBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 50;
+
                     element.innerHTML = formatText(text.substring(0, i));
                     i++;
-                    const box = document.getElementById('scroll-box');
-                    box.scrollTop = box.scrollHeight;
-                } else { clearInterval(interval); }
+
+                    // Only scroll down if the user wasn't trying to look at old messages
+                    if (isAtBottom) {
+                        box.scrollTop = box.scrollHeight;
+                    }
+                } else { 
+                    clearInterval(interval); 
+                }
             }, 15);
         }
 
