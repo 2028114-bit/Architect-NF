@@ -4,9 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Architect Lite | Pro</title>
-     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/2028114-bit/Picture/refs/heads/main/favicon-32x32.png">
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/2028114-bit/Picture/refs/heads/main/favicon-32x32.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
     <style>
         body { 
             background-color: #000; 
@@ -27,7 +43,6 @@
             justify-content: center;
             margin-bottom: 2rem;
             flex-shrink: 0;
-            /* Prevents the orb from blocking text selection/clicks */
             pointer-events: none; 
         }
 
@@ -38,33 +53,54 @@
             width: 100%;
             height: 100%;
             opacity: 0.3;
-            transition: all 0.8s ease;
+            transition: all 0.6s ease;
         }
 
+        /* IDLE STATE */
         .listening .ring { animation: breathe 3s infinite ease-in-out; }
-        .thinking .ring {
-            animation: think 1.5s infinite ease-in-out;
-            background: radial-gradient(circle, #fff 0%, #3b82f6 50%, transparent 70%);
-        }
-
         @keyframes breathe {
             0%, 100% { transform: scale(0.85); opacity: 0.2; }
             50% { transform: scale(1.05); opacity: 0.4; }
         }
 
+        /* THINKING STATE */
+        .thinking .ring {
+            animation: think 1.2s infinite ease-in-out;
+            background: radial-gradient(circle, #fff 0%, #3b82f6 50%, transparent 70%);
+        }
         @keyframes think {
             0%, 100% { transform: scale(0.9); opacity: 0.4; filter: blur(8px); }
             50% { transform: scale(1.1); opacity: 0.7; filter: blur(4px); }
         }
 
-        .ring:nth-child(2) { animation-delay: 0.5s !important; width: 90%; height: 90%; }
-        .ring:nth-child(3) { animation-delay: 1s !important; width: 80%; height: 80%; }
+        /* SPEAKING STATE (The Human Touch) */
+        .speaking .ring {
+            animation: speak 0.4s infinite alternate ease-in-out;
+            background: radial-gradient(circle, #fff 0%, #60a5fa 60%, transparent 75%);
+        }
+        @keyframes speak {
+            0% { transform: scale(1); opacity: 0.4; }
+            100% { transform: scale(1.15); opacity: 0.6; filter: blur(2px); }
+        }
+
+        .speaking .core-orb {
+            animation: core-glow 0.8s infinite alternate;
+            opacity: 0.8 !important;
+        }
+        @keyframes core-glow {
+            from { transform: scale(1); opacity: 0.3; }
+            to { transform: scale(1.4); opacity: 0.6; }
+        }
+
+        .ring:nth-child(2) { animation-delay: 0.4s !important; width: 90%; height: 90%; }
+        .ring:nth-child(3) { animation-delay: 0.8s !important; width: 80%; height: 80%; }
 
         #scroll-box::-webkit-scrollbar { width: 4px; }
         #scroll-box::-webkit-scrollbar-track { background: transparent; }
         #scroll-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
 
         #response-text b { color: #fff; font-weight: 600; }
+        mjx-container { color: white !important; outline: none; }
     </style>
 </head>
 <body class="p-6 md:p-10">
@@ -82,12 +118,12 @@
             <div class="ring"></div>
             <div class="ring"></div>
             <div class="ring"></div>
-            <div class="w-10 h-10 bg-white rounded-full blur-xl opacity-30"></div>
+            <div class="core-orb w-10 h-10 bg-white rounded-full blur-xl opacity-30"></div>
         </div>
 
         <div id="scroll-box" class="w-full flex-1 overflow-y-auto px-4 flex flex-col">
             <div class="flex-1"></div> 
-            <div id="response-text" class="text-2xl md:text-3xl font-medium text-gray-300 text-center leading-relaxed pb-8">
+            <div id="response-text" class="text-2xl md:text-3xl font-medium text-gray-300 text-center leading-relaxed pb-8 tex2jax_process">
                 Ready to help.
             </div>
         </div>
@@ -149,7 +185,7 @@
             chatHistory.push({ "role": "user", "content": text });
             input.value = "";
             display.style.opacity = "0.5";
-            orb.classList.replace('listening', 'thinking');
+            orb.className = "voice-container thinking";
 
             const now = new Date();
             const timeCtx = `${now.toLocaleTimeString()} on ${now.toLocaleDateString()}`;
@@ -158,11 +194,10 @@
                 { 
                     "role": "system", 
                     "content": `You are Architect Lite, a premium AI created and owned by Tommy.
-                    2. Avoid speak too much just answer what user asked
                     1. Speak naturally, intelligently, and helpfully.
-                    2. Avoid excessive slang or generic "AI" clichés. Match the user's level of formality.
+                    2. Avoid excessive speak. Answer what the user asked concisely.
                     3. If asked who made or owns you, identify Tommy as your creator.
-                    4. Keep responses concise but fully useful.
+                    4. Use LaTeX for math equations using $ for inline and $$ for blocks.
                     5. Current time: ${timeCtx}.` 
                 },
                 ...chatHistory
@@ -188,7 +223,7 @@
                     const aiResponse = data.choices[0].message.content;
                     chatHistory.push({ "role": "assistant", "content": aiResponse });
                     localStorage.setItem('chat_history', JSON.stringify(chatHistory));
-                    orb.classList.replace('thinking', 'listening');
+                    
                     display.style.opacity = "1";
                     typeText(aiResponse, display);
                 } else {
@@ -197,7 +232,7 @@
 
             } catch (err) {
                 display.innerText = "Error: " + err.message;
-                orb.classList.replace('thinking', 'listening');
+                orb.className = "voice-container listening";
                 display.style.opacity = "1";
             }
         }
@@ -206,22 +241,28 @@
             let i = 0; 
             element.innerHTML = ""; 
             const box = document.getElementById('scroll-box');
+            const orb = document.getElementById('orb-wrapper');
+
+            // Switch to Speaking State
+            orb.className = "voice-container speaking";
 
             const interval = setInterval(() => {
                 if (i <= text.length) {
-                    // Check if the user is at the bottom before adding text
-                    // We use a 50px buffer to make it feel smoother
                     const isAtBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 50;
-
                     element.innerHTML = formatText(text.substring(0, i));
                     i++;
 
-                    // Only scroll down if the user wasn't trying to look at old messages
                     if (isAtBottom) {
                         box.scrollTop = box.scrollHeight;
                     }
                 } else { 
-                    clearInterval(interval); 
+                    clearInterval(interval);
+                    // Switch back to Idle State
+                    orb.className = "voice-container listening";
+                    
+                    if (window.MathJax && window.MathJax.typesetPromise) {
+                        window.MathJax.typesetPromise([element]).catch((err) => console.log(err));
+                    }
                 }
             }, 15);
         }
@@ -229,7 +270,13 @@
         window.onload = () => {
             if (chatHistory.length > 0) {
                 const last = chatHistory.filter(m => m.role === 'assistant').pop();
-                if (last) document.getElementById('response-text').innerHTML = formatText(last.content);
+                if (last) {
+                    const display = document.getElementById('response-text');
+                    display.innerHTML = formatText(last.content);
+                    if (window.MathJax && window.MathJax.typesetPromise) {
+                        window.MathJax.typesetPromise([display]);
+                    }
+                }
             }
         };
     </script>
