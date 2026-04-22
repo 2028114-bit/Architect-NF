@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architect Lite | Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #000; 
+            color: white; 
+            font-family: 'Inter', sans-serif; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; 
+        }
+
+        .voice-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+            flex-shrink: 0;
+        }
+
+        .ring {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(59,130,246,0.5) 40%, transparent 70%);
+            width: 100%;
+            height: 100%;
+            opacity: 0.3;
+            transition: all 0.8s ease;
+        }
+
+        .listening .ring { animation: breathe 3s infinite ease-in-out; }
+        .thinking .ring {
+            animation: think 1.5s infinite ease-in-out;
+            background: radial-gradient(circle, #fff 0%, #3b82f6 50%, transparent 70%);
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(0.85); opacity: 0.2; }
+            50% { transform: scale(1.05); opacity: 0.4; }
+        }
+
+        @keyframes think {
+            0%, 100% { transform: scale(0.9); opacity: 0.4; filter: blur(8px); }
+            50% { transform: scale(1.1); opacity: 0.7; filter: blur(4px); }
+        }
+
+        .ring:nth-child(2) { animation-delay: 0.5s !important; width: 90%; height: 90%; }
+        .ring:nth-child(3) { animation-delay: 1s !important; width: 80%; height: 80%; }
+
+        #scroll-box::-webkit-scrollbar { width: 4px; }
+        #scroll-box::-webkit-scrollbar-track { background: transparent; }
+        #scroll-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        #response-text b { color: #fff; font-weight: 600; }
+    </style>
+</head>
+<body class="p-6 md:p-10">
+
+    <div class="w-full flex justify-between text-[10px] tracking-[0.2em] text-gray-500 uppercase font-semibold mb-4">
+        <span>Architect Lite 1.4 | Powered by Tommy</span>
+        <div class="flex gap-4">
+            <button onclick="newChat()" class="hover:text-white transition">New Chat</button>
+            <button onclick="resetAll()" class="hover:text-red-400 transition text-gray-700">Hard Reset</button>
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col items-center justify-center min-h-0 w-full max-w-2xl mx-auto">
+        <div id="orb-wrapper" class="voice-container listening">
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="w-10 h-10 bg-white rounded-full blur-xl opacity-30"></div>
+        </div>
+
+        <div id="scroll-box" class="w-full flex-1 overflow-y-auto px-4 flex flex-col">
+            <div class="flex-1"></div> 
+            <div id="response-text" class="text-2xl md:text-3xl font-medium text-gray-300 text-center leading-relaxed pb-8">
+                Ready to help.
+            </div>
+        </div>
+    </div>
+
+    <div class="w-full max-w-xl mx-auto pt-6 bg-black">
+        <div class="relative flex items-center bg-[#111] rounded-2xl px-5 py-4 border border-white/5 focus-within:border-white/20 transition-all shadow-2xl">
+            <input id="user-input" type="text" 
+                class="bg-transparent w-full outline-none text-lg text-white placeholder-gray-600" 
+                placeholder="Message Architect..."
+                onkeypress="if(event.key === 'Enter') startAI()">
+            
+            <button onclick="startAI()" class="ml-4 bg-white text-black rounded-xl p-2 hover:bg-gray-200 active:scale-95 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7-7-7v18" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let API_KEY = localStorage.getItem('openrouter_key') || "";
+        let chatHistory = JSON.parse(localStorage.getItem('chat_history')) || [];
+
+        function checkKey() {
+            if (!API_KEY) {
+                API_KEY = prompt("Enter OpenRouter API Key:");
+                if (API_KEY) localStorage.setItem('openrouter_key', API_KEY);
+            }
+        }
+
+        function newChat() {
+            chatHistory = [];
+            localStorage.setItem('chat_history', JSON.stringify(chatHistory));
+            document.getElementById('response-text').innerText = "Starting fresh...";
+            setTimeout(() => { document.getElementById('response-text').innerText = "How can I help?"; }, 1000);
+        }
+
+        function resetAll() {
+            if(confirm("Wipe all memory and API key?")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function formatText(text) {
+            return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+        }
+
+        async function startAI() {
+            checkKey();
+            const input = document.getElementById('user-input');
+            const display = document.getElementById('response-text');
+            const orb = document.getElementById('orb-wrapper');
+            const text = input.value.trim();
+
+            if (!text || !API_KEY) return;
+
+            chatHistory.push({ "role": "user", "content": text });
+            input.value = "";
+            display.style.opacity = "0.5";
+            orb.classList.replace('listening', 'thinking');
+
+            const now = new Date();
+            const timeCtx = `${now.toLocaleTimeString()} on ${now.toLocaleDateString()}`;
+
+            const messagesToSend = [
+                { 
+                    "role": "system", 
+                    "content": `You are Architect Lite, a premium AI created and owned by Tommy.
+                    1. Speak naturally, intelligently, and helpfully.
+                    2. Avoid excessive slang or generic "AI" clichés. Match the user's level of formality.
+                    3. If asked who made or owns you, identify Tommy as your creator.
+                    4. Keep responses concise but fully useful.
+                    5. Current time: ${timeCtx}.` 
+                },
+                ...chatHistory
+            ];
+
+            try {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: { 
+                        "Authorization": `Bearer ${API_KEY}`, 
+                        "Content-Type": "application/json",
+                        "X-Title": "Architect Lite"
+                    },
+                    body: JSON.stringify({ 
+                        "model": "meta-llama/llama-3.2-3b-instruct", 
+                        "messages": messagesToSend 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data && data.choices && data.choices.length > 0) {
+                    const aiResponse = data.choices[0].message.content;
+                    chatHistory.push({ "role": "assistant", "content": aiResponse });
+                    localStorage.setItem('chat_history', JSON.stringify(chatHistory));
+                    orb.classList.replace('thinking', 'listening');
+                    display.style.opacity = "1";
+                    typeText(aiResponse, display);
+                } else {
+                    throw new Error(data.error ? data.error.message : "Invalid response from server.");
+                }
+
+            } catch (err) {
+                display.innerText = "Error: " + err.message;
+                orb.classList.replace('thinking', 'listening');
+                display.style.opacity = "1";
+            }
+        }
+
+        function typeText(text, element) {
+            let i = 0; element.innerHTML = ""; 
+            const interval = setInterval(() => {
+                if (i <= text.length) {
+                    element.innerHTML = formatText(text.substring(0, i));
+                    i++;
+                    const box = document.getElementById('scroll-box');
+                    box.scrollTop = box.scrollHeight;
+                } else { clearInterval(interval); }
+            }, 15);
+        }
+
+        window.onload = () => {
+            if (chatHistory.length > 0) {
+                const last = chatHistory.filter(m => m.role === 'assistant').pop();
+                if (last) document.getElementById('response-text').innerHTML = formatText(last.content);
+            }
+        };
+    </script>
+</body>
+</html>
