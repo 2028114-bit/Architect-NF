@@ -3,95 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Small Image Generator (1B)</title>
+    <title>WebGPU Image Gen (1B)</title>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background-color: #1a1a1a; color: white; margin: 0; }
-        #container { text-align: center; background: #2a2a2a; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 90%; max-width: 500px; }
-        input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #444; background: #333; color: white; box-sizing: border-radius; box-sizing: border-box;}
-        button { padding: 10px 20px; border-radius: 6px; border: none; background-color: #007bff; color: white; cursor: pointer; font-size: 16px; }
-        button:disabled { background-color: #555; cursor: not-allowed; }
-        #output-canvas { margin-top: 20px; border: 2px solid #444; max-width: 100%; background: #000; display: none;}
-        #status { margin-top: 10px; font-size: 14px; color: #aaa; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #111;
+            color: #eee;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            background: #222;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 512px;
+            text-align: center;
+            border: 1px solid #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #333;
+            color: white;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #7c3aed;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:disabled { background: #444; cursor: not-allowed; }
+        #status { margin-top: 15px; font-size: 0.9rem; color: #aaa; }
+        #output-canvas {
+            margin-top: 20px;
+            border-radius: 8px;
+            max-width: 100%;
+            display: none;
+            background: #000;
+        }
     </style>
 </head>
 <body>
 
-<div id="container">
-    <h2>On-Device Image Generator</h2>
-    <input type="text" id="prompt" placeholder="A stylized cat, pastel colors" value="A beautiful sunset over a cyberpunk city">
-    <button id="generate-btn">Generate</button>
-    <p id="status">Ready.</p>
+<div class="card">
+    <h2>On-Device Image Gen</h2>
+    <input type="text" id="prompt" value="A futuristic city in the style of van gogh">
+    <button id="generate-btn">Loading Model...</button>
+    <p id="status">Checking WebGPU...</p>
     <canvas id="output-canvas"></canvas>
 </div>
 
 <script type="module">
-    // 1. Import Transformers.js via CDN
-    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers';
+    // We use the v3 Alpha because it supports the Diffusion Pipeline
+    import { AutoTokenizer, CLIPTextModelWithProjection, UNet2DConditionModel, AutoencoderKL, SchedulerFactory } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@3.0.0-alpha.0';
 
-    const promptInput = document.getElementById('prompt');
-    const generateBtn = document.getElementById('generate-btn');
-    const canvas = document.getElementById('output-canvas');
     const status = document.getElementById('status');
-    
-    // Global variable for the generator
-    let generator;
+    const btn = document.getElementById('generate-btn');
+    const canvas = document.getElementById('output-canvas');
+    const promptInput = document.getElementById('prompt');
 
-    // 2. Initialize the pipeline
-    async function loadModel() {
-        status.textContent = 'Downloading model (~1GB). Please wait...';
-        generateBtn.disabled = true;
+    let model_id = 'Xenova/tiny-stable-diffusion-v1-5';
+    let tokenizer, text_encoder, unet, vae, scheduler;
+
+    async function init() {
+        if (!navigator.gpu) {
+            status.textContent = "Error: WebGPU not supported in this browser.";
+            return;
+        }
 
         try {
-            // We use a small, quantized Stable Diffusion pipeline.
-            // Hugging Face will automatically download this once.
-            generator = await pipeline('text-to-image', 'Xenova/tiny-stable-diffusion-v1-5', {
-                device: 'webgpu', // FORCE WebGPU
-            });
+            status.textContent = "Downloading tiny-model components (approx 600MB)...";
             
-            status.textContent = 'Model loaded. Ready to generate.';
-            generateBtn.disabled = false;
-        } catch (error) {
-            status.textContent = `Error loading model: ${error.message}`;
-            console.error(error);
+            // Load all components of the Stable Diffusion pipeline
+            tokenizer = await AutoTokenizer.from_pretrained(model_id);
+            text_encoder = await CLIPTextModelWithProjection.from_pretrained(model_id, { device: 'webgpu' });
+            unet = await UNet2DConditionModel.from_pretrained(model_id, { device: 'webgpu' });
+            vae = await AutoencoderKL.from_pretrained(model_id, { device: 'webgpu' });
+            scheduler = SchedulerFactory.from_pretrained(model_id);
+
+            status.textContent = "Model Ready.";
+            btn.textContent = "Generate Image";
+            btn.disabled = false;
+        } catch (e) {
+            status.textContent = "Load failed: " + e.message;
+            console.error(e);
         }
     }
 
-    // 3. Generate the image
-    async function generateImage() {
-        if (!generator) return;
-        const text = promptInput.value;
-        status.textContent = `Generating "${text}"... This can take 30-60 seconds...`;
-        generateBtn.disabled = true;
-        canvas.style.display = 'none';
+    async function generate() {
+        btn.disabled = true;
+        status.textContent = "Generating pixels... (Watch your GPU usage!)";
+        
+        const prompt = promptInput.value;
+        const num_inference_steps = 20; 
+        const guidance_scale = 7.5;
 
         try {
-            // Inference parameters
-            const output = await generator(text, {
-                negative_prompt: 'ugly, blurry, poor quality',
-                num_inference_steps: 20, // Lower steps = faster, worse quality
-                guidance_scale: 7.5,
-            });
+            // 1. Encode prompt
+            const { input_ids } = await tokenizer(prompt, { padding: true, truncation: true });
+            const prompt_embeds = await text_encoder(input_ids);
 
-            // 4. Draw the image data to the canvas
-            const imageData = output[0];
-            canvas.width = imageData.width;
-            canvas.height = imageData.height;
+            // 2. Prepare latents (noise)
+            let latents = unet.generate_latents(1, 4, 32, 32); // 256x256 image
+
+            // 3. Denoising loop
+            scheduler.set_timesteps(num_inference_steps);
+            for (const t of scheduler.timesteps) {
+                const model_output = await unet(latents, prompt_embeds, t);
+                latents = scheduler.step(model_output, t, latents);
+                status.textContent = `Denoising: ${Math.round((t/scheduler.timesteps[0])*100)}% remaining`;
+            }
+
+            // 4. Decode latents to image
+            const image = await vae.decode(latents);
+            
+            // 5. Render to canvas
+            canvas.width = 256;
+            canvas.height = 256;
             const ctx = canvas.getContext('2d');
+            const imageData = new ImageData(image, 256, 256);
             ctx.putImageData(imageData, 0, 0);
 
-            status.textContent = 'Done.';
-            canvas.style.display = 'inline-block';
-        } catch (error) {
-            status.textContent = `Generation failed: ${error.message}`;
+            canvas.style.display = 'block';
+            status.textContent = "Done!";
+        } catch (e) {
+            status.textContent = "Gen error: " + e.message;
         } finally {
-            generateBtn.disabled = false;
+            btn.disabled = false;
         }
     }
 
-    generateBtn.addEventListener('click', generateImage);
-    
-    // Load model immediately on page load
-    loadModel();
+    btn.addEventListener('click', generate);
+    init();
 </script>
 
 </body>
