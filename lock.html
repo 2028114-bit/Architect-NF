@@ -333,9 +333,12 @@
             <span id="theme-text">Light Theme</span>
         </button>
         <button class="footer-btn" onclick="openSettings()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            Settings
-        </button>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+    Settings
+</button>
     </div>
 </div>
 
@@ -402,7 +405,7 @@
                     <button onclick="closePreview()" style="background:#222; border:none; color:white; cursor:pointer; padding:4px 12px; border-radius:4px; font-size:10px; font-weight: bold;">✕</button>
                 </div>
             </div>
-            <iframe id="preview-frame" sandbox="allow-scripts allow-modals allow-same-origin"></iframe>
+            <iframe id="preview-frame" sandbox="allow-scripts allow-modals"></iframe>
             <div id="canvas-code-container"></div>
         </div>
     </div>
@@ -1481,71 +1484,60 @@ function triggerImageGen() {
     showToast("Image Mode: Describe your image and press send");
 }
 async function triggerWebScrape() {
-    const url = prompt("Enter a URL to scrape for context:");
+    const url = prompt("Enter a URL to scrape (e.g., https://en.wikipedia.org/wiki/AI):");
     if (!url) return;
 
-    // Basic URL validation
     if (!url.startsWith('http')) {
-        showToast("Please enter a valid URL starting with http/https", "danger");
+        showToast("Please enter a full URL starting with https://", "danger");
         return;
     }
 
-    showToast("Scraping website...");
+    showToast("Scraping via local-friendly proxy...");
     
     try {
-        // Use AllOrigins proxy to bypass CORS restrictions
-        const proxy = "https://api.allorigins.win/get?url=";
-        const response = await fetch(`${proxy}${encodeURIComponent(url)}`);
+        // We switch to 'corsproxy.io' which is generally more forgiving for local file testing
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
         
-        if (!response.ok) throw new Error("Failed to reach proxy");
+        const response = await fetch(proxyUrl);
         
-        const data = await response.json();
-        const html = data.contents;
+        if (!response.ok) throw new Error("Proxy connection failed.");
+        
+        const html = await response.text();
 
-        // Parse and clean the HTML locally in the browser
+        // Standard DOM Parsing
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        // Remove noise elements (scripts, styles, ads)
-        doc.querySelectorAll('script, style, nav, footer, iframe, ads, header').forEach(el => el.remove());
+        // Clean up the junk
+        doc.querySelectorAll('script, style, nav, footer, header, iframe, ads, noscript').forEach(el => el.remove());
         
-        // Extract text and clean up whitespace
         const cleanText = doc.body.innerText
             .replace(/\s+/g, ' ') 
             .trim()
-            .substring(0, 10000); // Limit to 10k chars to stay within context limits
+            .substring(0, 15000); // Increased limit slightly
 
-        // Push to your existing pendingFiles array
+        if (cleanText.length < 100) {
+            throw new Error("Site returned too little text. It might be a protected page.");
+        }
+
         pendingFiles.push({
             name: `WEB: ${new URL(url).hostname}`,
-            content: `--- SOURCE: ${url} ---\n\n${cleanText}`
+            content: `--- CONTENT FROM ${url} ---\n\n${cleanText}`
         });
 
-        // Trigger your existing UI tag update
         updateFileTags();
-        showToast("Web content added to context", "success");
+        showToast("Web content attached!", "success");
         
     } catch (error) {
-        console.error(error);
-        showToast("Scraping failed (CORS or Website Blocked)", "danger");
+        console.error("Scraper Error:", error);
+        showToast("Scrape Failed: " + error.message, "danger");
+        
+        // Detailed help for the user
+        if (window.location.protocol === 'file:') {
+            alert("LOCAL FILE DETECTED: Browsers block web scraping when opening HTML files directly. \n\nTo fix this: \n1. Upload this file to GitHub Pages.\n2. Or use a 'Live Server' extension in VS Code.");
+        }
     }
-}
-
-// Ensure updateFileTags is explicitly defined or updated to show the chips
-function updateFileTags() {
-    const attachTag = document.getElementById("attachment-tag");
-    if (!attachTag) return;
-    
-    attachTag.style.display = pendingFiles.length ? "flex" : "none";
-    attachTag.innerHTML = pendingFiles.map((f, i) => `
-        <div class="file-chip">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-            ${f.name}
-            <span class="remove-file-btn" onclick="removeFile(event, ${i})">✕</span>
-        </div>
-    `).join('');
-}
-</script>
+}</script>
 <div id="canvas-selection-menu">
         <input type="text" id="selection-prompt" placeholder="Ask AI to edit this selection...">
         <button onclick="askAiToEditSelection()">REPLACE</button>
