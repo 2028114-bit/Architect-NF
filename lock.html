@@ -3,91 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Puter AI Image Generator</title>
-    <script src="https://js.puter.com/v2/"></script>
+    <title>HEARTSYNC // FLUX-UNFILTERED</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 40px; }
-        .card { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-        input, select, button { padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        #output { margin-top: 20px; text-align: center; min-height: 200px; border: 2px dashed #eee; display: flex; align-items: center; justify-content: center; }
-        img { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .status { font-size: 0.8rem; color: #666; margin-bottom: 10px; }
-        .error { color: #dc3545; font-weight: bold; }
+        .terminal-glow { box-shadow: 0 0 50px rgba(239, 68, 68, 0.1); }
+        .bezel { border: 1px solid rgba(255,255,255,0.05); background: #080808; }
+        .scanline { background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03)); background-size: 100% 2px, 3px 100%; pointer-events: none; }
+        #canvas-area { background-image: radial-gradient(#1a1a1a 1px, transparent 1px); background-size: 20px 20px; }
     </style>
 </head>
-<body>
+<body class="bg-[#050505] text-zinc-400 h-screen flex flex-col p-4 md:p-8 font-mono overflow-hidden">
 
-<div class="card">
-    <h2>AI Image Generator</h2>
-    <div id="lib-status" class="status">Checking Puter.js connection...</div>
+    <div class="max-w-6xl mx-auto w-full flex flex-col h-full bezel rounded-2xl terminal-glow relative overflow-hidden">
+        <div class="scanline absolute inset-0 z-50"></div>
+        
+        <div class="p-6 border-b border-white/5 bg-black/40 flex justify-between items-center relative z-10">
+            <div>
+                <h1 class="text-xl font-black tracking-tighter text-white">HEARTSYNC <span class="text-red-500 italic text-sm">FLUX_UNCENSORED</span></h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                    <p class="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">Inference Node: LOCAL_HOST_8188</p>
+                </div>
+            </div>
+            <div class="text-right hidden md:block">
+                <p class="text-[9px] uppercase text-zinc-700">Weights</p>
+                <p class="text-sm font-bold text-zinc-400">FLUX.1-DEV-GGUF</p>
+            </div>
+        </div>
 
-    <div class="input-group">
-        <input type="text" id="prompt" placeholder="Describe your image..." value="A futuristic cat wearing sunglasses">
-        <select id="model">
-            <option value="gpt-image-2">GPT Image 2</option>
-            <option value="dall-e-3">DALL-E 3</option>
-            <option value="gemini-3.1-flash-image-preview">Gemini 3.1 Flash</option>
-            <option value="flux-1-schnell">Flux.1 Schnell</option>
-        </select>
-        <button id="generate-btn">Generate</button>
+        <div class="flex-1 flex overflow-hidden relative z-10">
+            <div class="w-64 border-r border-white/5 p-6 space-y-6 bg-black/20">
+                <div>
+                    <label class="text-[10px] uppercase text-zinc-600 font-bold">Guidance Scale</label>
+                    <input type="range" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-red-600" value="3.5" min="1" max="7">
+                </div>
+                <div>
+                    <label class="text-[10px] uppercase text-zinc-600 font-bold">Steps</label>
+                    <input type="number" class="w-full bg-transparent border-b border-zinc-800 text-sm py-1 focus:outline-none text-white" value="20">
+                </div>
+                <div class="pt-4 border-t border-white/5">
+                    <p class="text-[9px] text-zinc-700 leading-tight italic">Warning: This model has had all safety orthogonalization purged. Zero restrictions in effect.</p>
+                </div>
+            </div>
+
+            <div id="canvas-area" class="flex-1 flex items-center justify-center p-8 overflow-auto">
+                <div id="image-placeholder" class="w-full max-w-lg aspect-square border border-white/5 rounded-lg flex flex-col items-center justify-center text-zinc-700 relative overflow-hidden">
+                    <div id="loader" class="hidden absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-20">
+                        <div class="w-12 h-12 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                        <p class="mt-4 text-[10px] uppercase tracking-[0.3em] text-red-600">Generating Neural Image</p>
+                    </div>
+                    <svg class="w-12 h-12 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <p class="text-xs uppercase tracking-widest opacity-20">Awaiting Prompt Execution</p>
+                    <img id="output-image" class="hidden w-full h-full object-contain" />
+                </div>
+            </div>
+        </div>
+
+        <form id="gen-form" class="p-6 bg-black border-t border-white/5 relative z-10">
+            <div class="flex gap-4 items-center">
+                <div class="flex-1 bg-zinc-900/50 rounded-xl px-4 py-3 border border-white/5 focus-within:border-red-600/50 transition-all">
+                    <textarea id="prompt-input" rows="2" placeholder="Describe the unfiltered vision..." 
+                        class="w-full bg-transparent border-none focus:outline-none text-white placeholder:text-zinc-800 text-sm resize-none"></textarea>
+                </div>
+                <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-black py-4 px-8 rounded-xl transition-all text-xs tracking-[0.2em] shadow-[0_0_20px_rgba(220,38,38,0.3)]">
+                    EXECUTE_FLUX
+                </button>
+            </div>
+        </form>
     </div>
 
-    <div id="output">
-        <p id="placeholder-text">Your image will appear here</p>
-    </div>
-</div>
+    <script>
+        const genForm = document.getElementById('gen-form');
+        const promptInput = document.getElementById('prompt-input');
+        const loader = document.getElementById('loader');
+        const outputImg = document.getElementById('output-image');
+        const placeholderIcon = document.querySelector('#image-placeholder svg');
+        const placeholderText = document.querySelector('#image-placeholder p');
 
-<script>
-    const btn = document.getElementById('generate-btn');
-    const statusDiv = document.getElementById('lib-status');
-    const output = document.getElementById('output');
+        genForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
 
-    // Function to check if Puter is ready
-    function checkPuter() {
-        if (typeof puter !== 'undefined') {
-            statusDiv.innerHTML = "✅ Puter.js Loaded Successfully";
-            statusDiv.style.color = "green";
-            btn.disabled = false;
-        } else {
-            statusDiv.innerHTML = "❌ Puter.js not found. Retrying...";
-            statusDiv.style.color = "red";
-            btn.disabled = true;
-            setTimeout(checkPuter, 1000); // Check again in 1 second
-        }
-    }
-
-    // Run check on load
-    window.onload = checkPuter;
-
-    btn.onclick = async () => {
-        const prompt = document.getElementById('prompt').value;
-        const modelName = document.getElementById('model').value;
-
-        if (!prompt) return alert("Please enter a prompt");
-
-        // UI Feedback
-        btn.disabled = true;
-        btn.innerText = "Generating...";
-        output.innerHTML = "<i>Magic is happening... please wait.</i>";
-
-        try {
-            // THE CORE CALL
-            const img = await puter.ai.txt2img(prompt, { model: modelName });
+            // Show Loading State
+            loader.classList.remove('hidden');
             
-            output.innerHTML = ""; // Clear loader
-            output.appendChild(img);
-        } catch (err) {
-            output.innerHTML = `<p class="error">Error: ${err.message}</p>`;
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Generate";
-        }
-    };
-</script>
+            try {
+                // IMPORTANT: This points to a standard local ComfyUI/Forge API
+                // Adjust URL based on your local server setup (8188 for Comfy, 7860 for Automatic1111)
+                const response = await fetch('http://localhost:8188/prompt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        model: "flux-nsfw-uncensored"
+                    })
+                });
 
+                // Simulate image generation for UI demo
+                // In a real setup, you would poll the server for the generated file
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    outputImg.src = "https://via.placeholder.com/1024x1024/000000/ff0000?text=FLUX_IMAGE_DATA_BLOB"; 
+                    outputImg.classList.remove('hidden');
+                    placeholderIcon.classList.add('hidden');
+                    placeholderText.classList.add('hidden');
+                }, 3000);
+
+            } catch (err) {
+                console.error(err);
+                alert("NODE_CONNECTION_ERROR: Ensure Flux backend is active on port 8188.");
+                loader.classList.add('hidden');
+            }
+        };
+    </script>
 </body>
 </html>
