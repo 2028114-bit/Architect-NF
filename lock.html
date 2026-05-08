@@ -3,133 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zero-Backend AI Chat</title>
+    <title>Fast AI | Local File Mode</title>
     <style>
-        :root { --bg: #0b0e14; --panel: #161b22; --accent: #238636; --text: #e6edf3; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; display: flex; flex-direction: column; }
-        
-        /* Token Popup Styles */
-        #token-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 100; display: none; }
-        .modal-content { background: var(--panel); padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; border: 1px solid #30363d; }
-        
-        /* Chat UI Styles */
-        #chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .msg { padding: 12px 16px; border-radius: 12px; max-width: 80%; line-height: 1.5; font-size: 15px; }
+        :root { --bg: #0d1117; --panel: #161b22; --accent: #238636; --text: #e6edf3; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal-box { background: var(--panel); padding: 25px; border-radius: 8px; border: 1px solid #30363d; text-align: center; }
+        #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 15px; border-radius: 10px; max-width: 80%; }
         .user { align-self: flex-end; background: #21262d; border: 1px solid #30363d; }
-        .ai { align-self: flex-start; background: #238636; color: white; }
-        
-        #input-area { padding: 20px; background: var(--panel); display: flex; gap: 10px; border-top: 1px solid #30363d; }
-        input { flex: 1; background: #0d1117; border: 1px solid #30363d; color: white; padding: 12px; border-radius: 6px; outline: none; }
-        button { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .settings-btn { position: absolute; top: 10px; right: 10px; background: transparent; border: 1px solid #30363d; font-size: 12px; padding: 5px 10px; opacity: 0.6; color: white; z-index: 10; }
+        .ai { align-self: flex-start; background: var(--accent); }
+        #input-bar { padding: 20px; background: var(--panel); display: flex; gap: 10px; }
+        input { flex: 1; background: #0d1117; border: 1px solid #30363d; color: white; padding: 12px; border-radius: 5px; outline: none; }
+        button { background: var(--accent); border: none; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<button class="settings-btn" onclick="showModal()">⚙️ Update Token</button>
-
-<div id="token-modal">
-    <div class="modal-content">
+<div id="modal">
+    <div class="modal-box">
         <h3>Enter Hugging Face Token</h3>
-        <p style="font-size: 13px; color: #8b949e;">Get one at huggingface.co/settings/tokens</p>
-        <input type="password" id="token-input" placeholder="hf_xxxxxxxxxxxxxxxxx" style="width: 90%; margin-bottom: 20px; padding: 10px; border-radius: 5px;">
-        <br>
-        <button onclick="saveToken()">Save & Close</button>
+        <input type="password" id="t-input" placeholder="hf_...">
+        <button onclick="saveT()">Save</button>
     </div>
 </div>
 
-<div id="chat-container"></div>
-
-<div id="input-area">
-    <input type="text" id="user-prompt" placeholder="Ask something...">
-    <button onclick="handleSend()">Send</button>
+<div id="chat"></div>
+<div id="input-bar">
+    <input type="text" id="p" placeholder="Type here...">
+    <button onclick="send()">Send</button>
 </div>
 
 <script>
-    // Define UI functions globally so the buttons can see them immediately
-    const modal = document.getElementById('token-modal');
-    const tokenInput = document.getElementById('token-input');
-    const chatContainer = document.getElementById('chat-container');
-    const userPrompt = document.getElementById('user-prompt');
+    const chat = document.getElementById('chat');
+    const p = document.getElementById('p');
+    const modal = document.getElementById('modal');
 
-    window.showModal = function() {
-        modal.style.display = 'flex';
-    }
-
-    window.saveToken = function() {
-        const val = tokenInput.value.trim();
-        if (val) {
-            localStorage.setItem('hf_api_token', val);
-            modal.style.display = 'none';
-        }
-    }
-
-    // Check for token on startup
-    window.onload = () => {
-        if (!localStorage.getItem('hf_api_token')) {
-            showModal();
-        }
+    // 1. Storage Logic
+    window.saveT = () => {
+        localStorage.setItem('hf_key', document.getElementById('t-input').value);
+        modal.style.display = 'none';
     };
 
-    function appendMsg(role, text) {
-        const div = document.createElement('div');
-        div.className = `msg ${role}`;
-        div.innerText = text;
-        chatContainer.appendChild(div);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-        return div;
+    if (!localStorage.getItem('hf_key')) modal.style.display = 'flex';
+
+    function add(role, txt) {
+        const d = document.createElement('div');
+        d.className = `msg ${role}`;
+        d.innerText = txt;
+        chat.appendChild(d);
+        chat.scrollTop = chat.scrollHeight;
+        return d;
     }
 
-    // The core AI logic
-    window.handleSend = async function() {
-        const token = localStorage.getItem('hf_api_token');
-        if (!token) return showModal();
+    // 2. The Fetch Logic
+    async function send() {
+        const key = localStorage.getItem('hf_key');
+        const val = p.value.trim();
+        if (!val) return;
 
-        const text = userPrompt.value.trim();
-        if (!text) return;
-
-        appendMsg('user', text);
-        userPrompt.value = '';
-        const aiMsg = appendMsg('ai', '...');
+        add('user', val);
+        p.value = '';
+        const ai = add('ai', '...');
 
         try {
-            const response = await fetch("https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
+            // We use a different proxy that is more "Local File" friendly
+            // And we use Mistral-7B - it's often faster to wake up than Llama
+            const url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2";
+            
+            const res = await fetch(url, {
+                headers: { 
+                    "Authorization": `Bearer ${key}`,
+                    "Content-Type": "application/json" 
                 },
-                body: JSON.stringify({
-                    inputs: `<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n${text}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n`,
-                    parameters: { max_new_tokens: 500 }
-                })
+                method: "POST",
+                body: JSON.stringify({ inputs: val }),
             });
 
-            const data = await response.json();
+            const data = await res.json();
             
-            // Handle common HF response patterns
-            let reply = "";
-            if (Array.isArray(data)) {
-                reply = data[0].generated_text;
-            } else if (data.generated_text) {
-                reply = data.generated_text;
-            } else if (data.error) {
-                reply = "API Error: " + data.error;
+            if (data.error) {
+                ai.innerText = data.error.includes("loading") ? "Waking up... try again." : data.error;
+            } else {
+                // Mistral returns the whole prompt + answer, so we clean it
+                const fullText = data[0].generated_text;
+                ai.innerText = fullText.replace(val, "").trim();
             }
-
-            // Clean up the prompt from the response if Llama repeats it
-            aiMsg.innerText = reply.split('<|start_header_id|>assistant<|end_header_id|>').pop().trim();
-            
-        } catch (err) {
-            aiMsg.innerText = "Error: " + err.message;
+        } catch (e) {
+            ai.innerText = "CORS Error. Browsers block local files. Please use 'Live Server' in VS Code or host on GitHub Pages (Free).";
+            console.error(e);
         }
     }
 
-    // Allow Enter key to send
-    userPrompt.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') handleSend();
-    });
+    p.onkeydown = (e) => e.key === 'Enter' && send();
 </script>
-
 </body>
 </html>
