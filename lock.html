@@ -3,99 +3,292 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fast AI | Local File Mode</title>
+    <title>PeerConnect | Full-Scale P2P</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0d1117; --panel: #161b22; --accent: #238636; --text: #e6edf3; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 100; }
-        .modal-box { background: var(--panel); padding: 25px; border-radius: 8px; border: 1px solid #30363d; text-align: center; }
-        #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 15px; border-radius: 10px; max-width: 80%; }
-        .user { align-self: flex-end; background: #21262d; border: 1px solid #30363d; }
-        .ai { align-self: flex-start; background: var(--accent); }
-        #input-bar { padding: 20px; background: var(--panel); display: flex; gap: 10px; }
-        input { flex: 1; background: #0d1117; border: 1px solid #30363d; color: white; padding: 12px; border-radius: 5px; outline: none; }
-        button { background: var(--accent); border: none; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        :root {
+            --sidebar-bg: #111827;
+            --chat-bg: #0b0f1a;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --text-main: #f3f4f6;
+            --text-dim: #9ca3af;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Plus Jakarta Sans', sans-serif; background: var(--chat-bg); color: var(--text-main); }
+
+        .app-container { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        aside {
+            width: 320px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            flex-shrink: 0;
+        }
+
+        .logo { font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
+        .logo::before { content: ''; width: 12px; height: 12px; background: var(--accent); border-radius: 3px; }
+
+        .nav-section { margin-bottom: 30px; }
+        .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 12px; font-weight: 700; }
+
+        .id-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 10px;
+        }
+        .id-card:hover { background: rgba(255, 255, 255, 0.07); }
+        .id-value { font-family: monospace; font-size: 13px; color: var(--accent); word-break: break-all; margin-top: 5px; display: block; }
+
+        input {
+            width: 100%;
+            background: #1f2937;
+            border: 1px solid var(--border);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            outline: none;
+            font-family: inherit;
+        }
+        input:focus { border-color: var(--accent); }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+
+        /* --- MAIN CHAT --- */
+        main { flex: 1; display: flex; flex-direction: column; background: var(--chat-bg); }
+
+        #welcome-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; }
+        #welcome-view h1 { font-size: 32px; margin-bottom: 10px; }
+
+        #chat-view { display: none; flex: 1; flex-direction: column; }
+
+        .chat-header {
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #messages {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .msg-row { display: flex; flex-direction: column; width: 100%; }
+        .msg-row.mine { align-items: flex-end; }
+        .msg-row.theirs { align-items: flex-start; }
+
+        .sender-name { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; font-weight: 600; }
+
+        .bubble {
+            max-width: 60%;
+            padding: 14px 20px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        .mine .bubble { background: var(--accent); color: white; border-bottom-right-radius: 4px; }
+        .theirs .bubble { background: #1f2937; color: white; border-bottom-left-radius: 4px; }
+
+        .input-area {
+            padding: 24px 40px;
+            background: var(--chat-bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 15px;
+        }
+
+        #msg-input { flex: 1; margin: 0; font-size: 15px; }
+        #send-btn { width: 100px; }
+
+        .status-tag { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .status-tag.online { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
     </style>
 </head>
 <body>
 
-<div id="modal">
-    <div class="modal-box">
-        <h3>Enter Hugging Face Token</h3>
-        <input type="password" id="t-input" placeholder="hf_...">
-        <button onclick="saveT()">Save</button>
-    </div>
-</div>
+<div class="app-container">
+    <aside>
+        <div class="logo">PeerConnect</div>
+        
+        <div class="nav-section">
+            <div class="label">Profile</div>
+            <input type="text" id="user-name" placeholder="Your Name..." value="Anonymous">
+        </div>
 
-<div id="chat"></div>
-<div id="input-bar">
-    <input type="text" id="p" placeholder="Type here...">
-    <button onclick="send()">Send</button>
+        <div class="nav-section">
+            <div class="label">Your Room ID</div>
+            <div class="id-card" onclick="copyMyId()">
+                <small style="color: var(--text-dim)">Click to copy</small>
+                <span id="my-id" class="id-value">Generating...</span>
+            </div>
+        </div>
+
+        <div class="nav-section" id="connect-controls">
+            <div class="label">Establish Connection</div>
+            <button class="btn btn-primary" onclick="startHost()" style="margin-bottom: 12px;">Create Room</button>
+            <input type="text" id="remote-id" placeholder="Paste Friend's ID...">
+            <button class="btn btn-ghost" onclick="startJoin()">Join Friend</button>
+        </div>
+
+        <div style="margin-top: auto;">
+            <button class="btn btn-ghost" onclick="location.reload()">Reset Session</button>
+        </div>
+    </aside>
+
+    <main>
+        <div id="welcome-view">
+            <h1>Ready to chat?</h1>
+            <p>Set your name in the sidebar, then create or join a room.</p>
+        </div>
+
+        <div id="chat-view">
+            <div class="chat-header">
+                <div>
+                    <span style="font-weight: 600; font-size: 18px;">Direct Conversation</span>
+                    <div style="font-size: 12px; color: var(--text-dim);">P2P Encrypted</div>
+                </div>
+                <div id="status-tag" class="status-tag">Connected</div>
+            </div>
+
+            <div id="messages"></div>
+
+            <div class="input-area">
+                <input type="text" id="msg-input" placeholder="Write a message...">
+                <button class="btn btn-primary" id="send-btn" onclick="send()">Send</button>
+            </div>
+        </div>
+    </main>
 </div>
 
 <script>
-    const chat = document.getElementById('chat');
-    const p = document.getElementById('p');
-    const modal = document.getElementById('modal');
+    let peer = null;
+    let conn = null;
 
-    // 1. Storage Logic
-    window.saveT = () => {
-        localStorage.setItem('hf_key', document.getElementById('t-input').value);
-        modal.style.display = 'none';
-    };
+    // Initialize Peer
+    peer = new Peer({
+        config: {'iceServers': [{ url: 'stun:stun.l.google.com:19302' }]}
+    });
 
-    if (!localStorage.getItem('hf_key')) modal.style.display = 'flex';
+    peer.on('open', id => {
+        document.getElementById('my-id').innerText = id;
+    });
 
-    function add(role, txt) {
-        const d = document.createElement('div');
-        d.className = `msg ${role}`;
-        d.innerText = txt;
-        chat.appendChild(d);
-        chat.scrollTop = chat.scrollHeight;
-        return d;
+    peer.on('connection', incoming => {
+        conn = incoming;
+        setupChat();
+    });
+
+    function startHost() {
+        if (!peer.id) return;
+        alert("Room created! Send your ID to your friend.");
     }
 
-    // 2. The Fetch Logic
-    async function send() {
-        const key = localStorage.getItem('hf_key');
-        const val = p.value.trim();
-        if (!val) return;
+    function startJoin() {
+        const rId = document.getElementById('remote-id').value.trim();
+        if (!rId) return alert("Please enter a valid ID");
+        conn = peer.connect(rId, { reliable: true });
+        setupChat();
+    }
 
-        add('user', val);
-        p.value = '';
-        const ai = add('ai', '...');
+    function setupChat() {
+        conn.on('open', () => {
+            document.getElementById('welcome-view').style.display = 'none';
+            document.getElementById('chat-view').style.display = 'flex';
+            document.getElementById('status-tag').classList.add('online');
+            document.getElementById('status-tag').innerText = 'Live P2P';
+        });
 
-        try {
-            // We use a different proxy that is more "Local File" friendly
-            // And we use Mistral-7B - it's often faster to wake up than Llama
-            const url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2";
-            
-            const res = await fetch(url, {
-                headers: { 
-                    "Authorization": `Bearer ${key}`,
-                    "Content-Type": "application/json" 
-                },
-                method: "POST",
-                body: JSON.stringify({ inputs: val }),
-            });
-
-            const data = await res.json();
-            
-            if (data.error) {
-                ai.innerText = data.error.includes("loading") ? "Waking up... try again." : data.error;
-            } else {
-                // Mistral returns the whole prompt + answer, so we clean it
-                const fullText = data[0].generated_text;
-                ai.innerText = fullText.replace(val, "").trim();
+        conn.on('data', data => {
+            // We expect an object now: { name: "...", msg: "..." }
+            if (data.name && data.msg) {
+                appendMsg(data.name, data.msg, 'theirs');
             }
-        } catch (e) {
-            ai.innerText = "CORS Error. Browsers block local files. Please use 'Live Server' in VS Code or host on GitHub Pages (Free).";
-            console.error(e);
-        }
+        });
+
+        conn.on('close', () => {
+            alert("Partner disconnected");
+            location.reload();
+        });
     }
 
-    p.onkeydown = (e) => e.key === 'Enter' && send();
+    function send() {
+        const input = document.getElementById('msg-input');
+        const name = document.getElementById('user-name').value || "Anonymous";
+        
+        if (!input.value || !conn || !conn.open) return;
+
+        // Send as an object so the other person gets your name
+        const payload = {
+            name: name,
+            msg: input.value
+        };
+
+        conn.send(payload);
+        appendMsg("You", input.value, 'mine');
+        input.value = '';
+    }
+
+    function appendMsg(sender, text, type) {
+        const container = document.getElementById('messages');
+        const row = document.createElement('div');
+        row.className = `msg-row ${type}`;
+        
+        const nameLabel = document.createElement('div');
+        nameLabel.className = 'sender-name';
+        nameLabel.innerText = sender;
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.innerText = text;
+        
+        row.appendChild(nameLabel);
+        row.appendChild(bubble);
+        container.appendChild(row);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function copyMyId() {
+        const id = document.getElementById('my-id').innerText;
+        if (id === "Generating...") return;
+        navigator.clipboard.writeText(id);
+        alert("ID copied!");
+    }
+
+    document.getElementById('msg-input').addEventListener('keypress', e => {
+        if(e.key === 'Enter') send();
+    });
 </script>
+
 </body>
 </html>
