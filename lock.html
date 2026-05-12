@@ -1584,70 +1584,63 @@ async function triggerScraper(autoUrl = null) {
         showToast("Scraper Failed: Check URL or Connection", "danger");
     }
 }
-// --- BROWSER AUTOMATION & CLOUD SCRAPER LOGIC (GITHUB PAGES OPTIMIZED) ---
+// --- BROWSER AUTOMATION & CLOUD SCRAPER LOGIC (GITHUB PAGES FIXED) ---
 async function triggerScraper(url) {
     const targetUrl = url || inputEl.value.trim();
     if (!targetUrl.startsWith('http')) return;
 
     showToast("Architect Cloud: Bypassing CORS...");
     
-    // List of reliable free open-source proxies to avoid 500/522/CORS errors
-    const proxies = [
-        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
-        `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`
-    ];
+    // We switch to a more "GitHub-Friendly" bridge
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
 
-    let success = false;
-
-    for (const proxyUrl of proxies) {
-        try {
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error('Proxy failed');
+    try {
+        const response = await fetch(proxyUrl);
+        const data = await response.json();
+        
+        if (data && data.contents) {
+            const frame = document.getElementById('preview-frame');
             
-            let htmlContent;
-            // Handle JSON response from AllOrigins vs Raw Text from others
-            if (proxyUrl.includes('allorigins')) {
-                const data = await response.json();
-                htmlContent = data.contents;
-            } else {
-                htmlContent = await response.text();
+            // FIX: Ensure the iframe has the correct sandbox permissions for automation
+            frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+            
+            // Inject Base Tag + Content
+            const baseTag = `<base href="${targetUrl}">`;
+            frame.srcdoc = baseTag + data.contents;
+            
+            openPreview();
+            showToast("Connected via Cloud Proxy");
+            
+            if (currentMode === 'llama') {
+                inputEl.value = `Site loaded: ${targetUrl}\nI can now run automation scripts here.`;
             }
-
-            if (htmlContent) {
-                const frame = document.getElementById('preview-frame');
-                // Inject base tag so relative links/images work correctly
-                const baseTag = `<base href="${targetUrl}">`;
-                frame.srcdoc = baseTag + htmlContent;
-                
-                openPreview();
-                showToast("Connected via Cloud Proxy");
-                
-                if (currentMode === 'llama') {
-                    inputEl.value = `Site loaded: ${targetUrl}\nHow can I automate this for you?`;
-                }
-                success = true;
-                break; // Exit loop on first successful fetch
-            }
-        } catch (err) {
-            console.warn(`Proxy ${proxyUrl} failed, trying next...`);
-            continue;
+        } else {
+            throw new Error("No content");
         }
-    }
-
-    if (!success) {
-        showToast("Cloud Connection Failed. All proxies are busy.", "error");
+    } catch (err) {
+        // FINAL FALLBACK: If the proxy fails, try to open in a new window for manual automation
+        showToast("Proxy Blocked. Opening in External Tab...", "warning");
+        window.open(targetUrl, '_blank');
     }
 }
 
 function runAutomation(script) {
     const frame = document.getElementById('preview-frame');
     try {
-        // Runs the generated JS script inside the loaded site's context
-        frame.contentWindow.eval(script);
-        showToast("Automation Running...");
+        // We use a cleaner execution method to avoid sandbox escapes
+        const scriptEl = frame.contentDocument.createElement('script');
+        scriptEl.textContent = script;
+        frame.contentDocument.body.appendChild(scriptEl);
+        showToast("Automation Injected");
     } catch (e) {
-        showToast("Automation Error: " + e.message, "error");
+        // If the sandbox blocks direct injection, we try eval
+        try {
+            frame.contentWindow.eval(script);
+            showToast("Automation Running (eval)");
+        } catch (innerE) {
+            showToast("Security Block: Cannot automate this specific site.", "error");
+            console.error(innerE);
+        }
     }
 }
 
@@ -1682,10 +1675,10 @@ function toggleHeaderDropdown() {
 }
 </script>
 
-<div id="canvas-selection-menu" style="z-index: 9999;">
-    <input type="text" id="selection-prompt" placeholder="Ask AI to automate...">
+<div id="canvas-selection-menu" style="z-index: 9999; display: flex; gap: 5px; background: #1e1e1e; padding: 10px; border-radius: 8px;">
+    <input type="text" id="selection-prompt" placeholder="JS Command (e.g. alert('hi'))" style="flex:1;">
     <button onclick="askAiToEditSelection()">REPLACE</button>
-    <button id="run-auto-btn" onclick="const cmd = document.getElementById('selection-prompt').value; runAutomation(cmd);" style="background: #ff4757; color: white; margin-left: 5px; font-weight: bold;">RUN AUTO</button>
+    <button id="run-auto-btn" onclick="runAutomation(document.getElementById('selection-prompt').value)" style="background: #ff4757; color: white; font-weight: bold;">RUN AUTO</button>
 </div>
 </body>
 </html>
