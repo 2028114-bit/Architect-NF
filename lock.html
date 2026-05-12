@@ -1584,46 +1584,66 @@ async function triggerScraper(autoUrl = null) {
         showToast("Scraper Failed: Check URL or Connection", "danger");
     }
 }
-/// --- BROWSER AUTOMATION & CLOUD SCRAPER LOGIC ---
+// --- BROWSER AUTOMATION & CLOUD SCRAPER LOGIC (GITHUB PAGES OPTIMIZED) ---
 async function triggerScraper(url) {
     const targetUrl = url || inputEl.value.trim();
     if (!targetUrl.startsWith('http')) return;
 
-    showToast("Architect Cloud: Connecting...");
+    showToast("Architect Cloud: Bypassing CORS...");
     
-    try {
-        // Using AllOrigins (Open Source Proxy) to act as a 'Browser Cloud' 
-        // This bypasses CORS and lets you 'see' the site without a backend
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-        const response = await fetch(proxyUrl);
-        const data = await response.json();
-        
-        if (data.contents) {
-            const frame = document.getElementById('preview-frame');
+    // List of reliable free open-source proxies to avoid 500/522/CORS errors
+    const proxies = [
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+        `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`
+    ];
+
+    let success = false;
+
+    for (const proxyUrl of proxies) {
+        try {
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error('Proxy failed');
             
-            // Inject a Base Tag so images/links load correctly from the original site
-            const baseTag = `<base href="${targetUrl}">`;
-            frame.srcdoc = baseTag + data.contents;
-            
-            openPreview();
-            showToast("Site Loaded via Cloud");
-            
-            // Feed a snippet to the AI so it knows what to automate
-            if (currentMode === 'llama') {
-                const textSnippet = data.contents.substring(0, 1000).replace(/<[^>]*>/g, ' ');
-                inputEl.value = `Site loaded: ${targetUrl}\nHow can I automate this for you?`;
+            let htmlContent;
+            // Handle JSON response from AllOrigins vs Raw Text from others
+            if (proxyUrl.includes('allorigins')) {
+                const data = await response.json();
+                htmlContent = data.contents;
+            } else {
+                htmlContent = await response.text();
             }
+
+            if (htmlContent) {
+                const frame = document.getElementById('preview-frame');
+                // Inject base tag so relative links/images work correctly
+                const baseTag = `<base href="${targetUrl}">`;
+                frame.srcdoc = baseTag + htmlContent;
+                
+                openPreview();
+                showToast("Connected via Cloud Proxy");
+                
+                if (currentMode === 'llama') {
+                    inputEl.value = `Site loaded: ${targetUrl}\nHow can I automate this for you?`;
+                }
+                success = true;
+                break; // Exit loop on first successful fetch
+            }
+        } catch (err) {
+            console.warn(`Proxy ${proxyUrl} failed, trying next...`);
+            continue;
         }
-    } catch (err) {
-        showToast("Cloud Connection Failed", "error");
+    }
+
+    if (!success) {
+        showToast("Cloud Connection Failed. All proxies are busy.", "error");
     }
 }
 
-// Function to execute Javascript directly on the loaded site
 function runAutomation(script) {
     const frame = document.getElementById('preview-frame');
     try {
-        // This runs the script inside the 'Cloud Browser' iframe
+        // Runs the generated JS script inside the loaded site's context
         frame.contentWindow.eval(script);
         showToast("Automation Running...");
     } catch (e) {
@@ -1635,7 +1655,6 @@ function runAutomation(script) {
 inputEl.addEventListener("input", () => {
     const val = inputEl.value.trim();
     const urlPattern = /^(https?:\/\/[^\s]+)$/;
-    
     if (urlPattern.test(val)) {
         triggerScraper(val);
     }
@@ -1649,15 +1668,12 @@ function setMode(mode) {
         else if (mode === 'think') display.innerText = "Reasoning Mode";
         else if (mode === 'llama') display.innerText = "Llama 3.2";
     }
-
     Object.keys(MODES).forEach(k => {
         const opt = document.getElementById(`opt-${k}`);
         if(opt) opt.classList.toggle('active', k === mode);
     });
-    
     document.getElementById("modeDropdown")?.classList.remove("show");
     document.getElementById("headerModeDropdown")?.classList.remove("show");
-    
     showToast(MODES[mode].label);
 }
 
@@ -1666,10 +1682,10 @@ function toggleHeaderDropdown() {
 }
 </script>
 
-<div id="canvas-selection-menu">
+<div id="canvas-selection-menu" style="z-index: 9999;">
     <input type="text" id="selection-prompt" placeholder="Ask AI to automate...">
     <button onclick="askAiToEditSelection()">REPLACE</button>
-    <button onclick="const cmd = document.getElementById('selection-prompt').value; runAutomation(cmd);" style="background:var(--accent-color); margin-left:5px;">RUN AUTO</button>
+    <button id="run-auto-btn" onclick="const cmd = document.getElementById('selection-prompt').value; runAutomation(cmd);" style="background: #ff4757; color: white; margin-left: 5px; font-weight: bold;">RUN AUTO</button>
 </div>
 </body>
 </html>
