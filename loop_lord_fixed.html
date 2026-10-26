@@ -4,46 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Loop Lord</title>
-    <script src="https://cdn.tailwindcss.com/3.4.17">
-        // Shared public Firebase room: live player positions and presence.
-        let llOnlineDb=null,llOnlineRef=null,llOnlineId=null,llOnlineReady=false,llOnlineLast=0;
-        const llRemote=new Map();
-        async function llConnectOnline(){
-          if(llOnlineReady)return true;
-          try{
-            const [A,U,D]=await Promise.all([
-              import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
-              import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
-              import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js')
-            ]);
-            const app=A.getApps().length?A.getApp():A.initializeApp({apiKey:'AIzaSyA384V4UD_36LK-Nwy9H_UhOZ_EhLprcRI',authDomain:'looplord-734a7.firebaseapp.com',databaseURL:'https://looplord-734a7-default-rtdb.firebaseio.com',projectId:'looplord-734a7',storageBucket:'looplord-734a7.firebasestorage.app',messagingSenderId:'178829630069',appId:'1:178829630069:web:5b2217e202b101f782f63c',measurementId:'G-6N6QFJ0SSP'});
-            const auth=U.getAuth(app), cred=auth.currentUser?{user:auth.currentUser}:await U.signInAnonymously(auth);
-            llOnlineId=cred.user.uid;llOnlineDb=D.getDatabase(app);
-            const room=D.ref(llOnlineDb,'loopLordRooms/public/players');llOnlineRef=D.ref(llOnlineDb,'loopLordRooms/public/players/'+llOnlineId);
-            await D.set(llOnlineRef,{name:player?.name||'Player',color:selectedColor.main,x:player?.x||0,y:player?.y||0,angle:player?.angle||0,alive:true,updatedAt:Date.now()});
-            D.onDisconnect(llOnlineRef).remove();
-            D.onValue(room,snap=>{
-              const seen=new Set(),now=Date.now();
-              snap.forEach(ch=>{
-                const id=ch.key,d=ch.val();if(id===llOnlineId||!d||now-(d.updatedAt||0)>15000)return;
-                seen.add(id);let e=llRemote.get(id);
-                if(!e){e={id:'online_'+id,name:'Guest',color:{main:'#d946ef',dark:'#a21caf',light:'#f0abfc'},isAlive:true,isBot:false,isRemote:true,trail:[],x:0,y:0,px:0,py:0,angle:0,scorePercent:0,kills:0,hat:'none'};llRemote.set(id,e);entities.push(e);}
-                e.px=e.x;e.py=e.y;e.x=+d.x||0;e.y=+d.y||0;e.angle=+d.angle||0;e.name=String(d.name||'Guest').slice(0,12);e.color.main=d.color||'#d946ef';e.isAlive=!!d.alive;
-              });
-              for(const [id,e] of llRemote)if(!seen.has(id)){llRemote.delete(id);entities=entities.filter(x=>x!==e);}
-            });
-            llOnlineReady=true;return true;
-          }catch(err){console.error(err);alert('Online connection failed. In Firebase Console, enable Authentication > Anonymous and configure Realtime Database rules for loopLordRooms. '+(err.message||''));return false;}
-        }
-        const llOriginalEntityUpdate=Entity.prototype.update;
-        Entity.prototype.update=function(){if(this.isRemote)return;return llOriginalEntityUpdate.call(this);};
-        function llPublishOnline(now){
-          if(!llOnlineReady||!llOnlineRef||!player||now-llOnlineLast<120)return;llOnlineLast=now;
-          import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js').then(D=>D.update(llOnlineRef,{name:player.name,color:selectedColor.main,x:player.x,y:player.y,angle:player.angle,alive:!!player.isAlive,updatedAt:Date.now()})).catch(()=>{});
-        }
-        window.addEventListener('beforeunload',()=>{if(llOnlineRef)import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js').then(D=>D.remove(llOnlineRef)).catch(()=>{});});
-
-</script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
         .home-shop { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:12px; padding:12px; border:0; border-radius:16px; font:900 15px Inter, sans-serif; letter-spacing:.04em; color:#fff; cursor:pointer; background:linear-gradient(135deg,#f59e0b,#ef4444); box-shadow:0 5px 0 #b45309; transition:transform .1s, box-shadow .1s; }
@@ -201,9 +162,9 @@
                 <div class="mode-switch" id="modeSwitch" data-mode="classic" role="tablist" aria-label="Game mode">
                     <div class="mode-thumb"></div>
                     <button type="button" id="modeClassic" role="tab" onclick="setMode('classic')">Classic</button>
-                    <button type="button" id="modeTimed" role="tab" aria-label="Time mode, 3 minutes" onclick="setMode('timed')">Time <small>3:00</small></button><button type="button" id="modeDomination" role="tab" onclick="setMode('domination')">Dominate</button><button type="button" id="modeElimination" role="tab" onclick="setMode('elimination')">Last Alive</button><button type="button" id="modeOnline" role="tab" onclick="setMode('online')">🌐 Online <small>LIVE</small></button>
+                    <button type="button" id="modeTimed" role="tab" aria-label="Time mode, 3 minutes" onclick="setMode('timed')">Time <small>3:00</small></button><button type="button" id="modeDomination" role="tab" onclick="setMode('domination')">Dominate</button><button type="button" id="modeElimination" role="tab" onclick="setMode('elimination')">Last Alive</button>
                 </div>
-                <p id="onlineHelp" style="display:none;font-size:11px;font-weight:800;color:#326b98;margin-top:8px">Online mode: players in this shared Firebase room appear live. Anonymous sign-in and database rules must be enabled.</p><div class="home-row">
+                <p id="onlineHelp" style="display:block;font-size:11px;font-weight:800;color:#326b98;margin-top:8px">🌐 Multiplayer is always on — choose the same game mode as your friend to meet in the arena.</p><div class="home-row">
                     <button type="button" class="home-shop" onclick="openShop()"><svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18V7l4.5 4L12 4l4.5 7L21 7v11z"/></svg>Hats</button>
                     <button type="button" class="home-shop home-stats" onclick="openStats()"><svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M4 20V10h4v10H4zm6 0V4h4v16h-4zm6 0v-7h4v7h-4z"/></svg>Stats</button>
                 </div>
@@ -334,7 +295,7 @@
     </div>
 
     <script>
-        /* --- SOUND SYNTHESIZER --- */
+/* --- SOUND SYNTHESIZER --- */
         class SoundEngine {
             constructor() { this.ctx = null; this.muted = false; }
             init() {
@@ -1905,7 +1866,7 @@
             victim.isAlive = false;
             victim.isOutside = false;
             victim.trail = [];
-            victim.respawnAt = performance.now() + (reason === 'territory' ? 5500 : 3000); victim.needsRetry = !['elimination','online'].includes(gameMode) && victim !== player;
+            victim.respawnAt = performance.now() + (reason === 'territory' ? 5500 : 3000); victim.needsRetry = gameMode !== 'elimination' && victim !== player;
             dirtyIds.add(victim.id);
             territoryDirty = true;
 
@@ -3248,8 +3209,8 @@
             workEma = workEma * 0.94 + (performance.now() - w0 + logicMs) * 0.06;
             if (++workFrames > 90 && workEma > 9 && dprCap > 1) { dprCap = Math.max(1, dprCap - 0.25); workFrames = 0; workEma = 6; resizeCanvas(); }
 
-            entities.forEach(e => { if (!e.isRemote && !e.isAlive && e.needsRetry && !['elimination','online'].includes(gameMode) && performance.now() > e.respawnAt) { e.needsRetry = false; e.spawn(); } });
-            if (gameMode === 'online') llPublishOnline(performance.now());
+            entities.forEach(e => { if (!e.isRemote && !e.isAlive && e.needsRetry && gameMode !== 'elimination' && performance.now() > e.respawnAt) { e.needsRetry = false; e.spawn(); } });
+            llPublishOnline(performance.now());
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
@@ -3288,6 +3249,8 @@
 
             player = new Entity(1, playerName, selectedColor, false);
             player.hat = stats.hat; applyHatPerks(player);
+            // Multiplayer is global: every game mode joins the same shared room.
+            llConnectOnline();
 
             entities = [player];
             let availableColors = COLOR_PALETTE.filter(c => c.id !== selectedColor.id).concat(BOT_EXTRA_COLORS);
@@ -3514,7 +3477,7 @@
         let isPaused = false, gameMode = 'classic', modeEndAt = 0, streak = 0, lastKillAt = 0, runBonusXp = 0, roundOver = false;
         try { gameMode = ['classic','timed','domination','elimination','online'].includes(localStorage.getItem('paperio_mode')) ? localStorage.getItem('paperio_mode') : 'classic'; } catch (err) {}
         function setMode(m) {
-            const oh=document.getElementById('onlineHelp'); if(oh) oh.style.display=m==='online'?'block':'none';
+            const oh=document.getElementById('onlineHelp'); if(oh) oh.style.display='block';
             gameMode = m; try { localStorage.setItem('paperio_mode', m); } catch (err) {}
             const sw = document.getElementById('modeSwitch'); if (sw) sw.dataset.mode = m;
             document.getElementById('modeClassic').classList.toggle('on', m === 'classic');
@@ -3729,14 +3692,14 @@
         async function llConnectOnline(){
           if(llOnlineReady)return true;
           try{
-            const [A,U,D]=await Promise.all([
+            const [A,D]=await Promise.all([
               import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
-              import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
               import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js')
             ]);
-            const app=A.getApps().length?A.getApp():A.initializeApp({apiKey:'AIzaSyA384V4UD_36LK-Nwy9H_UhOZ_EhLprcRI',authDomain:'looplord-734a7.firebaseapp.com',databaseURL:'https://looplord-734a7-default-rtdb.firebaseio.com',projectId:'looplord-734a7',storageBucket:'looplord-734a7.firebasestorage.app',messagingSenderId:'178829630069',appId:'1:178829630069:web:5b2217e202b101f782f63c',measurementId:'G-6N6QFJ0SSP'});
-            const auth=U.getAuth(app), cred=auth.currentUser?{user:auth.currentUser}:await U.signInAnonymously(auth);
-            llOnlineId=cred.user.uid;llOnlineDb=D.getDatabase(app);
+            const app=A.getApps().length?A.getApp():A.initializeApp({apiKey:'AIzaSyA3844VUD_36LK-Nwy9H_UhOZ_EhLprcRI',authDomain:'looplord-734a7.firebaseapp.com',databaseURL:'https://looplord-734a7-default-rtdb.firebaseio.com',projectId:'looplord-734a7',storageBucket:'looplord-734a7.firebasestorage.app',messagingSenderId:'178829630069',appId:'1:178829630069:web:5b2217e202b101f782f63c',measurementId:'G-6N6QFJ0SSP'});
+            // No Firebase Authentication: each browser tab uses a temporary client ID.
+            llOnlineId=(crypto.randomUUID?crypto.randomUUID():('guest_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)));
+            llOnlineDb=D.getDatabase(app);
             const room=D.ref(llOnlineDb,'loopLordRooms/public/players');llOnlineRef=D.ref(llOnlineDb,'loopLordRooms/public/players/'+llOnlineId);
             await D.set(llOnlineRef,{name:player?.name||'Player',color:selectedColor.main,x:player?.x||0,y:player?.y||0,angle:player?.angle||0,alive:true,updatedAt:Date.now()});
             D.onDisconnect(llOnlineRef).remove();
@@ -3751,7 +3714,7 @@
               for(const [id,e] of llRemote)if(!seen.has(id)){llRemote.delete(id);entities=entities.filter(x=>x!==e);}
             });
             llOnlineReady=true;return true;
-          }catch(err){console.error(err);alert('Online connection failed. In Firebase Console, enable Authentication > Anonymous and configure Realtime Database rules for loopLordRooms. '+(err.message||''));return false;}
+          }catch(err){console.error(err);alert('Online connection failed. Configure public Realtime Database read/write rules for loopLordRooms (this setup does not use Authentication). '+(err.message||''));return false;}
         }
         const llOriginalEntityUpdate=Entity.prototype.update;
         Entity.prototype.update=function(){if(this.isRemote)return;return llOriginalEntityUpdate.call(this);};
